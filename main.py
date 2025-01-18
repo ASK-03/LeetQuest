@@ -15,10 +15,15 @@ def paginate_data(data, page, items_per_page):
     end = start + items_per_page
     return data[start:end]
 
+# Generate LeetCode problem link
+def generate_leetcode_link(title_slug):
+    base_url = "https://leetcode.com/problems/"
+    return f"{base_url}{title_slug}/description/"
+
 # Streamlit App
 def main():
     st.title("Rating-Based Question Viewer")
-    
+
     # Load data
     data = load_data()
 
@@ -26,9 +31,19 @@ def main():
     st.sidebar.header("Filter by Rating")
     min_rating = st.sidebar.number_input("Minimum Rating", value=1800, step=50)
     max_rating = st.sidebar.number_input("Maximum Rating", value=2000, step=50)
-    
+
+    # Sorting option
+    st.sidebar.header("Sort Options")
+    sort_order = st.sidebar.selectbox("Sort by Rating", ["Ascending", "Descending"])
+
     # Filter the data based on the rating range
     filtered_data = data[(data['Rating'] >= min_rating) & (data['Rating'] <= max_rating)]
+
+    # Sort the data
+    if sort_order == "Ascending":
+        filtered_data = filtered_data.sort_values(by="Rating", ascending=True)
+    else:
+        filtered_data = filtered_data.sort_values(by="Rating", ascending=False)
 
     # Paginate filtered data
     items_per_page = 10
@@ -41,17 +56,20 @@ def main():
     # Display paginated data
     paginated_data = paginate_data(filtered_data, page, items_per_page)
     st.write(f"Displaying page {page + 1} of {total_pages}")
-    st.write(paginated_data[['Rating', 'ID', 'Title', 'ContestSlug']])
 
-    # # Additional details for each problem
-    # st.markdown("### Problem Details")
-    # for _, row in paginated_data.iterrows():
-    #     st.markdown(f"""
-    #     - **Title**: {row['Title']}
-    #     - **Rating**: {row['Rating']}
-    #     - **Contest**: {row['ContestSlug']}
-    #     - **Problem Index**: {row['ProblemIndex']}
-    #     """)
+    # Add clickable links in the Title column
+    paginated_data['Title'] = paginated_data.apply(
+        lambda row: f'<a href="{generate_leetcode_link(row["TitleSlug"])}" target="_blank">{row["Title"]}</a>', 
+        axis=1
+    )
+
+    # Display the table with HTML rendering for links
+    st.write(
+        paginated_data[['Rating', 'ID', 'Title', 'ContestSlug']].to_html(
+            index=False, escape=False
+        ),
+        unsafe_allow_html=True
+    )
 
 if __name__ == "__main__":
     main()
